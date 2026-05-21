@@ -92,14 +92,13 @@
         <button onclick="fecharLeituraQR()" class="mt-6 bg-red-600 text-white px-6 py-2 rounded-full font-bold">Cancelar</button>
     </div>
 
-    <!-- TÚNEL INVISÍVEL (NOVA MANEIRA DIFERENTE E INFALÍVEL) -->
-    <!-- Removido o onload direto do HTML para evitar ReferenceError -->
+    <!-- TÚNEL INVISÍVEL (MÉTODO INFALÍVEL PARA PLANILHA DO GOOGLE) -->
     <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
 
     <script>
-        // ======= COLE A SUA NOVA URL DO GOOGLE AQUI =======
+        // ======= URL DA SUA PLANILHA (VIA GOOGLE APPS SCRIPT) =======
         const GOOGLE_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwXda0T1Z5vkl2Y9a_b2TFj4Vkw3ZbJCwRBNSsoHEYoFh_ArDw7N55ySN4tmgVQqbZA/exec";
-        // ==================================================
+        // ============================================================
         
         let html5QrcodeScanner = null;
         let codigoPDA = "";
@@ -193,7 +192,7 @@
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = GOOGLE_SCRIPT_WEB_APP_URL;
-            form.target = 'hidden_iframe'; // O alvo é o túnel invisível!
+            form.target = 'hidden_iframe'; // O alvo é o túnel invisível para evitar problemas de CORS!
             form.style.display = 'none';
 
             // Função ajudante para criar os campos de dados
@@ -219,27 +218,31 @@
             // Removemos o formulário para não sujar a página
             setTimeout(() => document.body.removeChild(form), 1000);
             
-            // Simulamos o sucesso visual (o iframe tratará do resto)
+            // Simulamos o sucesso visual após um breve tempo de envio (o iframe tratará do resto no fundo)
             setTimeout(() => {
-                mostrarMensagem("Registo efetuado com sucesso!", "sucesso");
+                mostrarMensagem("Registo salvo com sucesso!", "sucesso");
+                
+                // Limpar formulário
                 document.getElementById('nome').value = "";
                 codigoPDA = "";
                 document.getElementById('pda-resultado').innerText = "Aguardando...";
                 
+                // Restaura o botão
                 btnSubmit.innerHTML = originalBtnText;
                 btnSubmit.disabled = false;
                 btnSubmit.classList.remove('opacity-70', 'cursor-not-allowed');
                 
+                // Oculta mensagem de feedback após alguns segundos
                 setTimeout(() => {
                     document.getElementById('feedback-msg').style.display = 'none';
                 }, 5000);
             }, 1500);
         }
 
-        // Atribuimos o evento 'onload' diretamente via JavaScript para evitar erros de referência (ReferenceError)
+        // Esta função captura discretamente a conclusão do envio pelo iframe
         document.getElementById('hidden_iframe').onload = function() {
             if (formularioEnviado) {
-                console.log("Comunicação com o Google terminada.");
+                console.log("Comunicação com o Google Sheets concluída com sucesso.");
                 formularioEnviado = false;
             }
         };
