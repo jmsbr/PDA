@@ -181,24 +181,29 @@
             const horaAtual = agora.toLocaleTimeString('pt-BR');
 
             try {
-                // Monta os dados diretamente na URL (método GET) - Bypassa totalmente o bloqueio de segurança
-                const params = new URLSearchParams({
-                    data: dataAtual,
-                    hora: horaAtual,
-                    nome: nome,
-                    pda: codigoPDA,
-                    tipo: tipoRegistro
-                });
+                // Montar os dados num formato de formulário padrão (URLSearchParams)
+                // Isto diz ao Google "Estou a enviar dados como se fosse um formulário de um site"
+                const formData = new URLSearchParams();
+                formData.append('data', dataAtual);
+                formData.append('hora', horaAtual);
+                formData.append('nome', nome);
+                formData.append('pda', codigoPDA);
+                formData.append('tipo', tipoRegistro);
                 
-                const urlFinal = GOOGLE_SCRIPT_WEB_APP_URL + '?' + params.toString();
+                // Adicionamos um carimbo de tempo à URL para obrigar o telemóvel a não usar cache antigo
+                const urlSemCache = GOOGLE_SCRIPT_WEB_APP_URL + '?cb=' + Date.now();
 
-                // Dispara a URL para o Google
-                await fetch(urlFinal, {
-                    method: 'GET',
-                    mode: 'no-cors' // Garante que o navegador não trave a requisição
+                // Envia o pedido com método POST e formato URL-Encoded
+                await fetch(urlSemCache, {
+                    method: 'POST',
+                    mode: 'no-cors', // Fundamental para não rebentar no telemóvel
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: formData.toString()
                 });
 
-                // Assume sucesso porque o no-cors garante o envio, mesmo que a resposta do Google seja oculta
+                // Assumimos sucesso porque o envio via form-urlencoded com no-cors nunca é bloqueado
                 mostrarMensagem("Registro salvo com sucesso na planilha!", "sucesso");
                 
                 // Limpar formulário
@@ -207,7 +212,7 @@
                 document.getElementById('pda-resultado').innerText = "Aguardando...";
                 
             } catch (error) {
-                console.error(error);
+                console.error("Erro na requisição: ", error);
                 mostrarMensagem("Erro ao enviar. Verifique sua conexão.", "erro");
             } finally {
                 // Restaura o botão
