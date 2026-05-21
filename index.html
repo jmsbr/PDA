@@ -124,7 +124,7 @@
                     // Ignora erros de leitura contínua (quando não acha o QR)
                 }
             ).catch(err => {
-                alert("Erro ao acessar a câmera. Verifique as permissões.");
+                alert("Erro ao aceder à câmara. Verifique as permissões.");
                 fecharLeituraQR();
             });
         }
@@ -190,24 +190,26 @@
 
             try {
                 // Envia para o Google Sheets
-                // Usando text/plain para evitar bloqueios de CORS preflight no Google Script
-                const response = await fetch(GOOGLE_SCRIPT_WEB_APP_URL, {
+                // Utilizando mode: 'no-cors' para forçar o envio e ultrapassar a política de segurança do Google (CORS)
+                await fetch(GOOGLE_SCRIPT_WEB_APP_URL, {
                     method: 'POST',
+                    mode: 'no-cors', 
                     headers: {
                         'Content-Type': 'text/plain;charset=utf-8',
                     },
                     body: JSON.stringify(payload)
                 });
 
+                // Como o "no-cors" devolve uma resposta oculta (opaque), assumimos o sucesso se a rede não falhar
                 mostrarMensagem("Registro salvo com sucesso na planilha!", "sucesso");
                 
-                // Limpar formulário (mantém o tipo de registro selecionado)
+                // Limpar formulário (mantém o tipo de registo selecionado)
                 document.getElementById('nome').value = "";
                 codigoPDA = "";
                 document.getElementById('pda-resultado').innerText = "Aguardando...";
                 
             } catch (error) {
-                mostrarMensagem("Erro ao enviar. Verifique sua conexão com a internet.", "erro");
+                mostrarMensagem("Erro ao enviar. Verifique a sua ligação à internet.", "erro");
                 console.error(error);
             } finally {
                 // Restaura o botão
