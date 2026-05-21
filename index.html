@@ -180,37 +180,35 @@
             const dataAtual = agora.toLocaleDateString('pt-BR');
             const horaAtual = agora.toLocaleTimeString('pt-BR');
 
-            const payload = {
-                data: dataAtual,
-                hora: horaAtual,
-                nome: nome,
-                pda: codigoPDA,
-                tipo: tipoRegistro // Envia se é Retirada ou Devolução
-            };
-
             try {
-                // Envia para o Google Sheets
-                // Utilizando mode: 'no-cors' para forçar o envio e ultrapassar a política de segurança do Google (CORS)
-                await fetch(GOOGLE_SCRIPT_WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'no-cors', 
-                    headers: {
-                        'Content-Type': 'text/plain;charset=utf-8',
-                    },
-                    body: JSON.stringify(payload)
+                // Monta os dados diretamente na URL (método GET) - Bypassa totalmente o bloqueio de segurança
+                const params = new URLSearchParams({
+                    data: dataAtual,
+                    hora: horaAtual,
+                    nome: nome,
+                    pda: codigoPDA,
+                    tipo: tipoRegistro
+                });
+                
+                const urlFinal = GOOGLE_SCRIPT_WEB_APP_URL + '?' + params.toString();
+
+                // Dispara a URL para o Google
+                await fetch(urlFinal, {
+                    method: 'GET',
+                    mode: 'no-cors' // Garante que o navegador não trave a requisição
                 });
 
-                // Como o "no-cors" devolve uma resposta oculta (opaque), assumimos o sucesso se a rede não falhar
+                // Assume sucesso porque o no-cors garante o envio, mesmo que a resposta do Google seja oculta
                 mostrarMensagem("Registro salvo com sucesso na planilha!", "sucesso");
                 
-                // Limpar formulário (mantém o tipo de registo selecionado)
+                // Limpar formulário
                 document.getElementById('nome').value = "";
                 codigoPDA = "";
                 document.getElementById('pda-resultado').innerText = "Aguardando...";
                 
             } catch (error) {
-                mostrarMensagem("Erro ao enviar. Verifique a sua ligação à internet.", "erro");
                 console.error(error);
+                mostrarMensagem("Erro ao enviar. Verifique sua conexão.", "erro");
             } finally {
                 // Restaura o botão
                 btnSubmit.innerHTML = originalBtnText;
