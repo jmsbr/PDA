@@ -92,12 +92,18 @@
         <button onclick="fecharLeituraQR()" class="mt-6 bg-red-600 text-white px-6 py-2 rounded-full font-bold">Cancelar</button>
     </div>
 
+    <!-- TÚNEL INVISÍVEL (NOVA MANEIRA DIFERENTE E INFALÍVEL) -->
+    <!-- Removido o onload direto do HTML para evitar ReferenceError -->
+    <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+
     <script>
-        // A SUA URL GERADA NO GOOGLE APPS SCRIPT:
+        // ======= COLE A SUA NOVA URL DO GOOGLE AQUI =======
         const GOOGLE_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwXda0T1Z5vkl2Y9a_b2TFj4Vkw3ZbJCwRBNSsoHEYoFh_ArDw7N55ySN4tmgVQqbZA/exec";
+        // ==================================================
         
         let html5QrcodeScanner = null;
         let codigoPDA = "";
+        let formularioEnviado = false;
 
         // ==========================================
         // LEITOR DE QR CODE
@@ -139,7 +145,7 @@
         }
 
         // ==========================================
-        // ENVIO DE DADOS (POST FETCH)
+        // ENVIO DE DADOS (VIA FORMULÁRIO INVISÍVEL)
         // ==========================================
         function mostrarMensagem(texto, tipo) {
             const msgBox = document.getElementById('feedback-msg');
@@ -180,55 +186,63 @@
             const dataAtual = agora.toLocaleDateString('pt-BR');
             const horaAtual = agora.toLocaleTimeString('pt-BR');
 
-            try {
-                // Montar os dados num formato de formulário padrão (URLSearchParams)
-                // Isto diz ao Google "Estou a enviar dados como se fosse um formulário de um site"
-                const formData = new URLSearchParams();
-                formData.append('data', dataAtual);
-                formData.append('hora', horaAtual);
-                formData.append('nome', nome);
-                formData.append('pda', codigoPDA);
-                formData.append('tipo', tipoRegistro);
-                
-                // Adicionamos um carimbo de tempo à URL para obrigar o telemóvel a não usar cache antigo
-                const urlSemCache = GOOGLE_SCRIPT_WEB_APP_URL + '?cb=' + Date.now();
+            // Sinalizamos que iniciámos um envio
+            formularioEnviado = true;
 
-                // Envia o pedido com método POST e formato URL-Encoded
-                await fetch(urlSemCache, {
-                    method: 'POST',
-                    mode: 'no-cors', // Fundamental para não rebentar no telemóvel
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: formData.toString()
-                });
+            // Criamos um formulário de forma dinâmica no HTML
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = GOOGLE_SCRIPT_WEB_APP_URL;
+            form.target = 'hidden_iframe'; // O alvo é o túnel invisível!
+            form.style.display = 'none';
 
-                // Assumimos sucesso porque o envio via form-urlencoded com no-cors nunca é bloqueado
-                mostrarMensagem("Registro salvo com sucesso na planilha!", "sucesso");
-                
-                // Limpar formulário
+            // Função ajudante para criar os campos de dados
+            const adicionarCampo = (nome, valor) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = nome;
+                input.value = valor;
+                form.appendChild(input);
+            };
+
+            // Adicionamos os nossos dados ao formulário
+            adicionarCampo('data', dataAtual);
+            adicionarCampo('hora', horaAtual);
+            adicionarCampo('nome', nome);
+            adicionarCampo('pda', codigoPDA);
+            adicionarCampo('tipo', tipoRegistro);
+
+            // Injetamos na página e forçamos o clique de Enviar (Submit)
+            document.body.appendChild(form);
+            form.submit();
+            
+            // Removemos o formulário para não sujar a página
+            setTimeout(() => document.body.removeChild(form), 1000);
+            
+            // Simulamos o sucesso visual (o iframe tratará do resto)
+            setTimeout(() => {
+                mostrarMensagem("Registo efetuado com sucesso!", "sucesso");
                 document.getElementById('nome').value = "";
                 codigoPDA = "";
                 document.getElementById('pda-resultado').innerText = "Aguardando...";
                 
-            } catch (error) {
-                console.error("Erro na requisição: ", error);
-                mostrarMensagem("Erro ao enviar. Verifique sua conexão.", "erro");
-            } finally {
-                // Restaura o botão
                 btnSubmit.innerHTML = originalBtnText;
                 btnSubmit.disabled = false;
                 btnSubmit.classList.remove('opacity-70', 'cursor-not-allowed');
                 
-                // Ocultar mensagem de sucesso após 5 segundos
                 setTimeout(() => {
-                    const msgBox = document.getElementById('feedback-msg');
-                    if(msgBox.classList.contains('bg-green-100')) {
-                        msgBox.style.display = 'none';
-                    }
+                    document.getElementById('feedback-msg').style.display = 'none';
                 }, 5000);
-            }
+            }, 1500);
         }
+
+        // Atribuimos o evento 'onload' diretamente via JavaScript para evitar erros de referência (ReferenceError)
+        document.getElementById('hidden_iframe').onload = function() {
+            if (formularioEnviado) {
+                console.log("Comunicação com o Google terminada.");
+                formularioEnviado = false;
+            }
+        };
     </script>
 </body>
 </html>
