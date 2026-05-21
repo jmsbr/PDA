@@ -3,25 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Controle de PDA</title>
+    <title>Controle de PDA - Firebase</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome para os ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Biblioteca do Leitor de QR Code -->
+    
+    <!-- Bibliotecas de Exportação e QR Code -->
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
     <style>
         body { background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         /* Modal do leitor de QR Code */
         #qr-reader { width: 100%; max-width: 400px; margin: 0 auto; display: none; border-radius: 8px; overflow: hidden; }
         #qr-reader-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 50; justify-content: center; align-items: center; flex-direction: column; }
+        .hide { display: none !important; }
     </style>
 </head>
 <body class="p-4 sm:p-8 flex justify-center items-center min-h-screen">
 
-    <div class="bg-white rounded-2xl shadow-lg p-6 sm:p-8 w-full max-w-md">
-        
+    <!-- ========================================== -->
+    <!-- TELA 1: REGISTRO (USUÁRIOS)                -->
+    <!-- ========================================== -->
+    <div id="view-registro" class="bg-white rounded-2xl shadow-lg p-6 sm:p-8 w-full max-w-md relative">
+        <!-- Botão Secreto Admin -->
+        <button onclick="abrirAdmin()" class="absolute top-4 right-4 text-gray-300 hover:text-gray-500 transition" title="Acesso Admin">
+            <i class="fa-solid fa-lock"></i>
+        </button>
+
         <!-- Cabeçalho -->
         <div class="text-center mb-8">
             <div class="bg-blue-600 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
@@ -31,10 +43,8 @@
             <p class="text-gray-500 text-sm mt-2">Registre a retirada ou devolução lendo o QR Code.</p>
         </div>
 
-        <!-- Formulário -->
         <div class="space-y-6">
-
-            <!-- Tipo de Registro (Retirada ou Devolução) -->
+            <!-- Tipo de Registro -->
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-3">Tipo de Registro *</label>
                 <div class="flex gap-4">
@@ -49,7 +59,7 @@
                 </div>
             </div>
             
-            <!-- Nome do Colaborador -->
+            <!-- Nome -->
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Nome do Colaborador *</label>
                 <div class="relative">
@@ -60,7 +70,7 @@
                 </div>
             </div>
 
-            <!-- Identificação do PDA -->
+            <!-- PDA -->
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Identificação do PDA *</label>
                 <div class="flex gap-3">
@@ -74,14 +84,78 @@
                 </div>
             </div>
 
-            <!-- Mensagem de Feedback -->
             <div id="feedback-msg" class="hidden p-4 rounded-xl text-sm font-medium text-center"></div>
 
             <!-- Botão Submit -->
             <button id="btn-submit" onclick="enviarDados()" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-blue-700 active:bg-blue-800 transition shadow-md flex justify-center items-center gap-2">
                 <i class="fa-solid fa-cloud-arrow-up"></i> Registrar Movimentação
             </button>
+        </div>
+    </div>
 
+    <!-- ========================================== -->
+    <!-- TELA 2: LOGIN ADMIN                        -->
+    <!-- ========================================== -->
+    <div id="view-login" class="bg-white rounded-2xl shadow-lg p-6 sm:p-8 w-full max-w-md hide relative">
+        <button onclick="voltarParaRegistro()" class="absolute top-4 left-4 text-gray-400 hover:text-gray-600 transition">
+            <i class="fa-solid fa-arrow-left text-xl"></i>
+        </button>
+        <div class="text-center mb-6 mt-4">
+            <div class="bg-slate-800 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                <i class="fa-solid fa-user-shield text-2xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800">Acesso Restrito</h1>
+            <p class="text-gray-500 text-sm mt-2">Área exclusiva para administradores.</p>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Senha de Acesso</label>
+                <input type="password" id="admin-senha" class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-slate-500 focus:border-slate-500" placeholder="Digite a senha">
+            </div>
+            <p id="login-erro" class="text-red-500 text-sm font-semibold text-center hide">Senha incorreta!</p>
+            <button onclick="fazerLoginAdmin()" class="w-full bg-slate-800 text-white font-bold py-3 px-4 rounded-xl hover:bg-slate-700 transition shadow-md">
+                Entrar
+            </button>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TELA 3: PAINEL ADMIN (DASHBOARD)           -->
+    <!-- ========================================== -->
+    <div id="view-dashboard" class="bg-white rounded-2xl shadow-lg p-4 sm:p-8 w-full max-w-5xl hide relative flex flex-col" style="height: 90vh;">
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex items-center gap-3">
+                <button onclick="sairAdmin()" class="text-gray-500 hover:text-gray-800 transition">
+                    <i class="fa-solid fa-arrow-left text-xl"></i>
+                </button>
+                <h1 class="text-2xl font-bold text-gray-800">Registros do PDA</h1>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="exportarExcel()" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 transition flex items-center gap-2 text-sm shadow-sm">
+                    <i class="fa-solid fa-file-excel"></i> <span class="hidden sm:inline">Excel</span>
+                </button>
+                <button onclick="exportarPDF()" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 transition flex items-center gap-2 text-sm shadow-sm">
+                    <i class="fa-solid fa-file-pdf"></i> <span class="hidden sm:inline">PDF</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="overflow-y-auto flex-1 border border-gray-200 rounded-xl">
+            <table class="min-w-full text-left text-sm whitespace-nowrap">
+                <thead class="bg-gray-100 sticky top-0 z-10 shadow-sm">
+                    <tr>
+                        <th class="px-4 py-3 font-semibold text-gray-700">Data</th>
+                        <th class="px-4 py-3 font-semibold text-gray-700">Hora</th>
+                        <th class="px-4 py-3 font-semibold text-gray-700">Colaborador</th>
+                        <th class="px-4 py-3 font-semibold text-gray-700">PDA</th>
+                        <th class="px-4 py-3 font-semibold text-gray-700">Movimentação</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-corpo" class="divide-y divide-gray-200">
+                    <tr><td colspan="5" class="text-center py-6 text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Carregando registros...</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -89,25 +163,60 @@
     <div id="qr-reader-overlay">
         <h2 class="text-white text-xl mb-4 font-bold">Aponte para o QR Code</h2>
         <div id="qr-reader" class="bg-white"></div>
-        <button onclick="fecharLeituraQR()" class="mt-6 bg-red-600 text-white px-6 py-2 rounded-full font-bold">Cancelar</button>
+        <button onclick="fecharLeituraQR()" class="mt-6 bg-red-600 text-white px-6 py-2 rounded-full font-bold shadow-lg">Cancelar</button>
     </div>
 
-    <!-- TÚNEL INVISÍVEL (MÉTODO INFALÍVEL PARA PLANILHA DO GOOGLE) -->
-    <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+    <!-- ========================================== -->
+    <!-- SCRIPTS E FIREBASE INTEGRATION             -->
+    <!-- ========================================== -->
+    <script type="module">
+        // Importando módulos do Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    <script>
-        // ======= URL DA SUA PLANILHA (VIA GOOGLE APPS SCRIPT) =======
-        const GOOGLE_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwXda0T1Z5vkl2Y9a_b2TFj4Vkw3ZbJCwRBNSsoHEYoFh_ArDw7N55ySN4tmgVQqbZA/exec";
-        // ============================================================
+        // =========================================================================
+        // CONFIGURAÇÃO DO FIREBASE
+        // =========================================================================
+        // AVISO: Se você for colocar isso no seu GitHub, substitua os valores 
+        // abaixo pela sua configuração real do Firebase (Project Settings).
+        let firebaseConfig;
+        if (typeof __firebase_config !== 'undefined') {
+            firebaseConfig = JSON.parse(__firebase_config); // Ambiente de teste
+        } else {
+            // COLOQUE AS SUAS CHAVES DO FIREBASE AQUI
+            firebaseConfig = {
+                apiKey: "SUA_API_KEY",
+                authDomain: "SEU_PROJETO.firebaseapp.com",
+                projectId: "SEU_PROJETO",
+                storageBucket: "SEU_PROJETO.appspot.com",
+                messagingSenderId: "123456789",
+                appId: "1:123456789:web:abcdef"
+            };
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
         
+        // Autenticação anônima obrigatória para escrever no banco de forma segura
+        let usuarioAtual = null;
+        signInAnonymously(auth).catch(error => console.error("Erro na Auth:", error));
+        onAuthStateChanged(auth, (user) => { usuarioAtual = user; });
+
+        // Caminho da coleção (onde os dados são salvos)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'pda_app_db';
+        const collectionPath = typeof __firebase_config !== 'undefined' ? `artifacts/${appId}/public/data/registros_pda` : 'registros_pda';
+        // =========================================================================
+
         let html5QrcodeScanner = null;
         let codigoPDA = "";
-        let formularioEnviado = false;
+        let registrosLocais = []; // Guarda os dados para exportar
 
         // ==========================================
-        // LEITOR DE QR CODE
+        // FUNÇÕES DO QR CODE
         // ==========================================
-        function iniciarLeituraQR() {
+        window.iniciarLeituraQR = () => {
             document.getElementById('qr-reader-overlay').style.display = 'flex';
             document.getElementById('qr-reader').style.display = 'block';
 
@@ -115,36 +224,32 @@
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
             html5QrcodeScanner.start(
-                { facingMode: "environment" }, // Câmera traseira
+                { facingMode: "environment" },
                 config,
-                (decodedText, decodedResult) => {
-                    // Sucesso na leitura
+                (decodedText) => {
                     codigoPDA = decodedText;
                     document.getElementById('pda-resultado').innerText = codigoPDA;
                     fecharLeituraQR();
-                    // Vibra o celular se suportado
                     if (navigator.vibrate) navigator.vibrate(200);
                 },
-                (errorMessage) => {
-                    // Ignora erros de leitura contínua (quando não acha o QR)
-                }
+                () => {}
             ).catch(err => {
-                alert("Erro ao aceder à câmara. Verifique as permissões.");
+                alert("Erro ao acessar a câmera. Verifique as permissões do navegador.");
                 fecharLeituraQR();
             });
-        }
+        };
 
-        function fecharLeituraQR() {
+        window.fecharLeituraQR = () => {
             document.getElementById('qr-reader-overlay').style.display = 'none';
             if (html5QrcodeScanner) {
                 html5QrcodeScanner.stop().then(() => {
                     html5QrcodeScanner.clear();
                 }).catch(err => console.error(err));
             }
-        }
+        };
 
         // ==========================================
-        // ENVIO DE DADOS (VIA FORMULÁRIO INVISÍVEL)
+        // FUNÇÕES DE ENVIO PARA O FIREBASE
         // ==========================================
         function mostrarMensagem(texto, tipo) {
             const msgBox = document.getElementById('feedback-msg');
@@ -158,21 +263,14 @@
             }
         }
 
-        async function enviarDados() {
+        window.enviarDados = async () => {
             const nome = document.getElementById('nome').value.trim();
             const tipoRegistro = document.querySelector('input[name="tipo-registro"]:checked').value;
             
-            // Validações
-            if (!nome) {
-                mostrarMensagem("Por favor, preencha o Nome do Colaborador.", "erro");
-                return;
-            }
-            if (!codigoPDA) {
-                mostrarMensagem("Por favor, leia o QR Code do PDA.", "erro");
-                return;
-            }
+            if (!nome) return mostrarMensagem("Por favor, preencha o Nome.", "erro");
+            if (!codigoPDA) return mostrarMensagem("Por favor, leia o QR Code do PDA.", "erro");
+            if (!usuarioAtual) return mostrarMensagem("Conectando ao banco, aguarde um instante e tente novamente.", "erro");
 
-            // Prepara a interface para o carregamento
             const btnSubmit = document.getElementById('btn-submit');
             const originalBtnText = btnSubmit.innerHTML;
             btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registrando...';
@@ -180,72 +278,161 @@
             btnSubmit.classList.add('opacity-70', 'cursor-not-allowed');
             document.getElementById('feedback-msg').style.display = 'none';
 
-            // Pega Data e Hora locais
             const agora = new Date();
-            const dataAtual = agora.toLocaleDateString('pt-BR');
-            const horaAtual = agora.toLocaleTimeString('pt-BR');
-
-            // Sinalizamos que iniciámos um envio
-            formularioEnviado = true;
-
-            // Criamos um formulário de forma dinâmica no HTML
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = GOOGLE_SCRIPT_WEB_APP_URL;
-            form.target = 'hidden_iframe'; // O alvo é o túnel invisível para evitar problemas de CORS!
-            form.style.display = 'none';
-
-            // Função ajudante para criar os campos de dados
-            const adicionarCampo = (nome, valor) => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = nome;
-                input.value = valor;
-                form.appendChild(input);
+            const payload = {
+                data: agora.toLocaleDateString('pt-BR'),
+                hora: agora.toLocaleTimeString('pt-BR'),
+                nome: nome,
+                pda: codigoPDA,
+                tipo: tipoRegistro,
+                timestamp: Date.now() // Ajuda a ordenar os registros
             };
 
-            // Adicionamos os nossos dados ao formulário
-            adicionarCampo('data', dataAtual);
-            adicionarCampo('hora', horaAtual);
-            adicionarCampo('nome', nome);
-            adicionarCampo('pda', codigoPDA);
-            adicionarCampo('tipo', tipoRegistro);
+            try {
+                // SALVA NO FIREBASE FIRESTORE AQUI
+                await addDoc(collection(db, collectionPath), payload);
 
-            // Injetamos na página e forçamos o clique de Enviar (Submit)
-            document.body.appendChild(form);
-            form.submit();
-            
-            // Removemos o formulário para não sujar a página
-            setTimeout(() => document.body.removeChild(form), 1000);
-            
-            // Simulamos o sucesso visual após um breve tempo de envio (o iframe tratará do resto no fundo)
-            setTimeout(() => {
-                mostrarMensagem("Registo salvo com sucesso!", "sucesso");
-                
-                // Limpar formulário
+                mostrarMensagem("Registro salvo com sucesso!", "sucesso");
                 document.getElementById('nome').value = "";
                 codigoPDA = "";
                 document.getElementById('pda-resultado').innerText = "Aguardando...";
                 
-                // Restaura o botão
+            } catch (error) {
+                console.error("Erro Firebase: ", error);
+                mostrarMensagem("Erro ao salvar. Verifique sua conexão e regras do Firebase.", "erro");
+            } finally {
                 btnSubmit.innerHTML = originalBtnText;
                 btnSubmit.disabled = false;
                 btnSubmit.classList.remove('opacity-70', 'cursor-not-allowed');
-                
-                // Oculta mensagem de feedback após alguns segundos
-                setTimeout(() => {
-                    document.getElementById('feedback-msg').style.display = 'none';
-                }, 5000);
-            }, 1500);
-        }
-
-        // Esta função captura discretamente a conclusão do envio pelo iframe
-        document.getElementById('hidden_iframe').onload = function() {
-            if (formularioEnviado) {
-                console.log("Comunicação com o Google Sheets concluída com sucesso.");
-                formularioEnviado = false;
+                setTimeout(() => { document.getElementById('feedback-msg').style.display = 'none'; }, 5000);
             }
         };
+
+        // ==========================================
+        // FLUXO DO PAINEL ADMIN
+        // ==========================================
+        let unsubscribeRealtime = null;
+
+        window.abrirAdmin = () => {
+            document.getElementById('view-registro').classList.add('hide');
+            document.getElementById('view-login').classList.remove('hide');
+            document.getElementById('admin-senha').value = "";
+            document.getElementById('login-erro').classList.add('hide');
+        };
+
+        window.voltarParaRegistro = () => {
+            document.getElementById('view-login').classList.add('hide');
+            document.getElementById('view-registro').classList.remove('hide');
+        };
+
+        window.sairAdmin = () => {
+            document.getElementById('view-dashboard').classList.add('hide');
+            document.getElementById('view-registro').classList.remove('hide');
+            if(unsubscribeRealtime) unsubscribeRealtime(); // Para de escutar o BD para economizar banda
+        };
+
+        window.fazerLoginAdmin = () => {
+            const senha = document.getElementById('admin-senha').value;
+            if (senha === "JT@2026") {
+                document.getElementById('view-login').classList.add('hide');
+                document.getElementById('view-dashboard').classList.remove('hide');
+                carregarRegistrosAoVivo();
+            } else {
+                document.getElementById('login-erro').classList.remove('hide');
+            }
+        };
+
+        // Escuta o Firebase em Tempo Real
+        function carregarRegistrosAoVivo() {
+            if(!usuarioAtual) return;
+            
+            const tbody = document.getElementById('tabela-corpo');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Carregando registros...</td></tr>';
+
+            unsubscribeRealtime = onSnapshot(collection(db, collectionPath), (snapshot) => {
+                registrosLocais = [];
+                snapshot.forEach(doc => registrosLocais.push(doc.data()));
+                
+                // Ordenar por data mais recente
+                registrosLocais.sort((a, b) => b.timestamp - a.timestamp);
+                
+                renderizarTabela();
+            }, (error) => {
+                console.error("Erro ao ler banco:", error);
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-red-500">Erro de permissão! Verifique as regras do Firestore.</td></tr>';
+            });
+        }
+
+        function renderizarTabela() {
+            const tbody = document.getElementById('tabela-corpo');
+            tbody.innerHTML = '';
+            
+            if(registrosLocais.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-500">Nenhum registro encontrado no banco.</td></tr>';
+                return;
+            }
+
+            registrosLocais.forEach(reg => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition";
+                
+                const corBadge = reg.tipo === 'Retirada' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800';
+
+                tr.innerHTML = `
+                    <td class="px-4 py-3 text-gray-600">${reg.data}</td>
+                    <td class="px-4 py-3 text-gray-600">${reg.hora}</td>
+                    <td class="px-4 py-3 text-gray-900 font-medium">${reg.nome}</td>
+                    <td class="px-4 py-3 font-mono text-gray-600">${reg.pda}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded-full text-xs font-bold ${corBadge}">${reg.tipo}</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ==========================================
+        // EXPORTAÇÃO (EXCEL & PDF)
+        // ==========================================
+        window.exportarExcel = () => {
+            if(registrosLocais.length === 0) return alert("Não há dados para exportar.");
+            
+            // Filtra os dados removendo o timestamp técnico
+            const dadosLimpos = registrosLocais.map(r => ({
+                Data: r.data,
+                Hora: r.hora,
+                Colaborador: r.nome,
+                PDA: r.pda,
+                Movimentação: r.tipo
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(dadosLimpos);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Registros PDA");
+            XLSX.writeFile(wb, "Registros_PDA.xlsx");
+        };
+
+        window.exportarPDF = () => {
+            if(registrosLocais.length === 0) return alert("Não há dados para exportar.");
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.text("Relatório de Controle de PDA", 14, 15);
+            doc.setFontSize(10);
+            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 22);
+
+            doc.autoTable({
+                startY: 28,
+                head: [['Data', 'Hora', 'Colaborador', 'PDA', 'Movimentação']],
+                body: registrosLocais.map(r => [r.data, r.hora, r.nome, r.pda, r.tipo]),
+                theme: 'striped',
+                headStyles: { fillColor: [30, 64, 175] } // Azul estilo Tailwind
+            });
+
+            doc.save("Registros_PDA.pdf");
+        };
+
     </script>
 </body>
 </html>
