@@ -2,281 +2,261 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Retirada - PDA</title>
-    <!-- Tailwind CSS para estilização moderna e responsiva -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Controle de PDA</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Biblioteca HTML5-QRCode para ler o código pela câmera -->
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <!-- Font Awesome para ícones -->
+    <!-- FontAwesome para os ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Biblioteca do Leitor de QR Code -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        /* Ajuste para o leitor de QR Code se adaptar a telas menores */
-        #reader { width: 100%; max-width: 400px; margin: 0 auto; border-radius: 0.5rem; overflow: hidden; }
-        #reader video { object-fit: cover; }
+        body { background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        /* Modal do leitor de QR Code */
+        #qr-reader { width: 100%; max-width: 400px; margin: 0 auto; display: none; border-radius: 8px; overflow: hidden; }
+        #qr-reader-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 50; justify-content: center; align-items: center; flex-direction: column; }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
+<body class="p-4 sm:p-8 flex justify-center items-center min-h-screen">
 
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 sm:p-8">
-        <div class="text-center mb-6">
-            <div class="bg-blue-600 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+    <div class="bg-white rounded-2xl shadow-lg p-6 sm:p-8 w-full max-w-md">
+        
+        <!-- Cabeçalho -->
+        <div class="text-center mb-8">
+            <div class="bg-blue-600 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
                 <i class="fa-solid fa-mobile-screen-button text-2xl"></i>
             </div>
             <h1 class="text-2xl font-bold text-gray-800">Retirada de PDA</h1>
-            <p class="text-gray-500 text-sm mt-1">Registre o uso lendo o QR Code do aparelho.</p>
+            <p class="text-gray-500 text-sm mt-2">Registre o uso lendo o QR Code do aparelho.</p>
         </div>
 
-        <form id="pdaForm" class="space-y-5" onsubmit="event.preventDefault(); submitData();">
+        <!-- Formulário -->
+        <div class="space-y-6">
             
-            <!-- Input: Nome do Colaborador -->
+            <!-- Nome do Colaborador -->
             <div>
-                <label for="colaborador" class="block text-sm font-medium text-gray-700 mb-1">Nome do Colaborador *</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Nome do Colaborador *</label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <i class="fa-solid fa-user text-gray-400"></i>
                     </div>
-                    <input type="text" id="colaborador" required placeholder="Digite seu nome completo"
-                        class="pl-10 w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
+                    <input type="text" id="nome" class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 text-gray-900" placeholder="Digite seu nome completo">
                 </div>
             </div>
 
-            <!-- Área do Scanner QR Code -->
-            <div class="border-t border-b border-gray-100 py-4 my-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Identificação do PDA *</label>
-                
-                <div id="scanner-container" class="mb-3 hidden">
-                    <div id="reader"></div>
-                    <button type="button" onclick="stopScanner()" class="mt-2 w-full text-sm text-red-600 hover:text-red-800 font-medium">
-                        Cancelar Leitura
-                    </button>
-                </div>
-
-                <div class="flex gap-2">
-                    <button type="button" onclick="startScanner()" id="btn-scan"
-                        class="flex-1 bg-gray-800 hover:bg-gray-900 text-white px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-qrcode"></i> Ler QR Code
-                    </button>
-                    <input type="text" id="pda-number" required readonly placeholder="Nº do PDA"
-                        class="flex-1 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2.5 text-center font-bold text-blue-700 focus:outline-none">
-                </div>
-            </div>
-
-            <!-- Status de Localização -->
+            <!-- Identificação do PDA -->
             <div>
-                <div class="flex items-center justify-between text-sm mb-1">
-                    <span class="font-medium text-gray-700">Geolocalização</span>
-                    <span id="geo-status" class="text-amber-500 font-medium"><i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Aguardando...</span>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Identificação do PDA *</label>
+                <div class="flex gap-3">
+                    <button type="button" onclick="iniciarLeituraQR()" class="bg-slate-800 text-white p-3 rounded-xl flex flex-col items-center justify-center w-24 hover:bg-slate-700 transition">
+                        <i class="fa-solid fa-qrcode text-xl mb-1"></i>
+                        <span class="text-xs font-semibold text-center leading-tight">Ler<br>QR Code</span>
+                    </button>
+                    <div class="flex-1 border border-gray-300 rounded-xl flex items-center justify-center bg-gray-50 text-blue-700 font-bold text-lg p-3 overflow-hidden">
+                        <span id="pda-resultado" class="truncate">Aguardando...</span>
+                    </div>
                 </div>
-                <input type="hidden" id="latitude">
-                <input type="hidden" id="longitude">
-                <p class="text-xs text-gray-500" id="geo-details">A localização será capturada automaticamente.</p>
+            </div>
+
+            <!-- Geolocalização -->
+            <div class="flex flex-col gap-1">
+                <div class="flex justify-between items-center">
+                    <label class="block text-sm font-semibold text-gray-700">Geolocalização</label>
+                    <span id="geo-status" class="text-sm font-bold text-orange-500 flex items-center gap-1">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Buscando...
+                    </span>
+                </div>
+                <p id="geo-coords" class="text-xs text-gray-500">Autorize o GPS para registrar.</p>
             </div>
 
             <!-- Mensagem de Feedback -->
-            <div id="feedback-msg" class="hidden p-3 rounded-lg text-sm font-medium text-center"></div>
+            <div id="feedback-msg" class="hidden p-4 rounded-xl text-sm font-medium text-center"></div>
 
             <!-- Botão Submit -->
-            <button type="submit" id="btn-submit" disabled
-                class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg px-4 py-3 font-bold transition-colors flex items-center justify-center gap-2 shadow-md">
+            <button id="btn-submit" onclick="enviarDados()" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-blue-700 active:bg-blue-800 transition shadow-md flex justify-center items-center gap-2">
                 <i class="fa-solid fa-cloud-arrow-up"></i> Registrar Retirada
             </button>
-        </form>
+
+        </div>
+    </div>
+
+    <!-- Overlay do Leitor de QR Code -->
+    <div id="qr-reader-overlay">
+        <h2 class="text-white text-xl mb-4 font-bold">Aponte para o QR Code</h2>
+        <div id="qr-reader" class="bg-white"></div>
+        <button onclick="fecharLeituraQR()" class="mt-6 bg-red-600 text-white px-6 py-2 rounded-full font-bold">Cancelar</button>
     </div>
 
     <script>
-        // ======== CONFIGURAÇÃO IMPORTANTE ========
-        // Substitua a URL abaixo pela URL que o Google Apps Script vai te gerar (Instruções no chat)
-        const GOOGLE_SCRIPT_WEB_APP_URL = "COLE_AQUI_A_URL_DO_SEU_WEB_APP";
-        // =========================================
+        // A SUA URL GERADA NO GOOGLE APPS SCRIPT:
+        const GOOGLE_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwXda0T1Z5vkl2Y9a_b2TFj4Vkw3ZbJCwRBNSsoHEYoFh_ArDw7N55ySN4tmgVQqbZA/exec";
+        
+        let html5QrcodeScanner = null;
+        let codigoPDA = "";
+        let latitude = "";
+        let longitude = "";
 
-        let html5QrcodeScanner;
-        let isGettingLocation = false;
+        // ==========================================
+        // GEOLOCALIZAÇÃO
+        // ==========================================
+        function obterLocalizacao() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        latitude = position.coords.latitude;
+                        longitude = position.coords.longitude;
+                        
+                        document.getElementById('geo-status').innerHTML = '<i class="fa-solid fa-circle-check"></i> Localizado';
+                        document.getElementById('geo-status').className = 'text-sm font-bold text-green-600 flex items-center gap-1';
+                        document.getElementById('geo-coords').innerText = `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`;
+                    },
+                    (error) => {
+                        document.getElementById('geo-status').innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Erro';
+                        document.getElementById('geo-status').className = 'text-sm font-bold text-red-600 flex items-center gap-1';
+                        document.getElementById('geo-coords').innerText = 'Falha ao obter localização. Verifique as permissões.';
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                document.getElementById('geo-coords').innerText = "Geolocalização não suportada pelo navegador.";
+            }
+        }
+        
+        // Inicia a busca pelo GPS assim que a página carrega
+        window.onload = obterLocalizacao;
 
-        // Inicializar captura de localização assim que a página carregar
-        window.onload = function() {
-            getLocation();
-        };
+        // ==========================================
+        // LEITOR DE QR CODE
+        // ==========================================
+        function iniciarLeituraQR() {
+            document.getElementById('qr-reader-overlay').style.display = 'flex';
+            document.getElementById('qr-reader').style.display = 'block';
 
-        // Função para iniciar o leitor de QR Code
-        function startScanner() {
-            document.getElementById('scanner-container').classList.remove('hidden');
-            document.getElementById('btn-scan').classList.add('hidden');
-            
-            // Inicializa o leitor
-            html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner = new Html5Qrcode("qr-reader");
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-            html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
-                .catch(err => {
-                    alert("Erro ao acessar a câmera. Verifique as permissões do navegador.");
-                    stopScanner();
-                });
-        }
-
-        // Função chamada quando o QR Code é lido com sucesso
-        function onScanSuccess(decodedText, decodedResult) {
-            // Toca um som de bipe curto
-            playBeep();
-            
-            // Preenche o campo com o valor lido do QR Code (ex: "PDA-001")
-            document.getElementById('pda-number').value = decodedText;
-            
-            // Para o scanner
-            stopScanner();
-            checkFormValidity();
-        }
-
-        // Ignorar falhas de leitura a cada frame (normal)
-        function onScanFailure(error) { /* não fazer nada */ }
-
-        // Parar o leitor e esconder a câmera
-        function stopScanner() {
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.stop().then(() => {
-                    html5QrcodeScanner.clear();
-                }).catch(err => console.log(err));
-            }
-            document.getElementById('scanner-container').classList.add('hidden');
-            document.getElementById('btn-scan').classList.remove('hidden');
-        }
-
-        // Capturar GPS
-        function getLocation() {
-            const statusLabel = document.getElementById('geo-status');
-            const detailsLabel = document.getElementById('geo-details');
-
-            if (!navigator.geolocation) {
-                statusLabel.innerHTML = "<span class='text-red-500'><i class='fa-solid fa-triangle-exclamation'></i> GPS não suportado</span>";
-                return;
-            }
-
-            navigator.geolocation.getCurrentPosition(
-                // Sucesso
-                (position) => {
-                    document.getElementById('latitude').value = position.coords.latitude;
-                    document.getElementById('longitude').value = position.coords.longitude;
-                    statusLabel.innerHTML = "<span class='text-green-600'><i class='fa-solid fa-check-circle'></i> Localizado</span>";
-                    detailsLabel.innerText = `Lat: ${position.coords.latitude.toFixed(4)}, Lng: ${position.coords.longitude.toFixed(4)}`;
-                    checkFormValidity();
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, // Câmera traseira
+                config,
+                (decodedText, decodedResult) => {
+                    // Sucesso na leitura
+                    codigoPDA = decodedText;
+                    document.getElementById('pda-resultado').innerText = codigoPDA;
+                    fecharLeituraQR();
+                    // Vibra o celular se suportado
+                    if (navigator.vibrate) navigator.vibrate(200);
                 },
-                // Erro
-                (error) => {
-                    statusLabel.innerHTML = "<span class='text-red-500'><i class='fa-solid fa-triangle-exclamation'></i> Erro no GPS</span>";
-                    detailsLabel.innerText = "Por favor, ative a localização do seu navegador/celular.";
-                    console.warn(`ERRO GPS(${error.code}): ${error.message}`);
-                },
-                // Opções
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-        }
-
-        // Verifica se podemos habilitar o botão de envio (Nome, PDA e GPS preenchidos)
-        function checkFormValidity() {
-            const nome = document.getElementById('colaborador').value;
-            const pda = document.getElementById('pda-number').value;
-            const lat = document.getElementById('latitude').value;
-            
-            const btn = document.getElementById('btn-submit');
-            if (nome && pda && lat) {
-                btn.removeAttribute('disabled');
-            } else {
-                btn.setAttribute('disabled', 'true');
-            }
-        }
-
-        // Ouve a digitação no nome para checar validade
-        document.getElementById('colaborador').addEventListener('input', checkFormValidity);
-
-        // Enviar dados para o Google Sheets
-        function submitData() {
-            const btnSubmit = document.getElementById('btn-submit');
-            const feedback = document.getElementById('feedback-msg');
-            
-            // Validar URL do Script
-            if(GOOGLE_SCRIPT_WEB_APP_URL.includes("COLE_AQUI")) {
-                showFeedback("Erro: URL do Google Apps Script não configurada no código HTML.", "error");
-                return;
-            }
-
-            // Preparar botão (loading state)
-            btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registrando...';
-            btnSubmit.setAttribute('disabled', 'true');
-            feedback.classList.add('hidden');
-
-            // Pegar data e hora local
-            const dataAtual = new Date();
-            const dataFormatada = dataAtual.toLocaleDateString('pt-BR');
-            const horaFormatada = dataAtual.toLocaleTimeString('pt-BR');
-
-            // Montar objeto que será enviado ao Sheets
-            const payload = {
-                data: dataFormatada,
-                hora: horaFormatada,
-                nome: document.getElementById('colaborador').value,
-                pda: document.getElementById('pda-number').value,
-                latitude: document.getElementById('latitude').value,
-                longitude: document.getElementById('longitude').value,
-                googleMapsLink: `https://www.google.com/maps?q=${document.getElementById('latitude').value},${document.getElementById('longitude').value}`
-            };
-
-            // Fazer a requisição POST
-            fetch(GOOGLE_SCRIPT_WEB_APP_URL, {
-                method: 'POST',
-                // Usa text/plain para evitar bloqueio de CORS (Preflight) padrão do navegador
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if(data.status === 'success') {
-                    showFeedback("✅ Retirada registrada com sucesso!", "success");
-                    // Limpar formulário para o próximo
-                    document.getElementById('colaborador').value = '';
-                    document.getElementById('pda-number').value = '';
-                    checkFormValidity();
-                } else {
-                    throw new Error("Erro no servidor Google.");
+                (errorMessage) => {
+                    // Ignora erros de leitura contínua (quando não acha o QR)
                 }
-            })
-            .catch(error => {
-                console.error("Erro:", error);
-                showFeedback("❌ Ocorreu um erro ao enviar os dados. Tente novamente.", "error");
-            })
-            .finally(() => {
-                // Restaurar botão
-                btnSubmit.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Registrar Retirada';
+            ).catch(err => {
+                alert("Erro ao acessar a câmera. Verifique as permissões.");
+                fecharLeituraQR();
             });
         }
 
-        // Exibe mensagem de erro ou sucesso
-        function showFeedback(msg, type) {
-            const feedback = document.getElementById('feedback-msg');
-            feedback.textContent = msg;
-            feedback.classList.remove('hidden', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800');
-            
-            if(type === 'success') {
-                feedback.classList.add('bg-green-100', 'text-green-800');
-            } else {
-                feedback.classList.add('bg-red-100', 'text-red-800');
+        function fecharLeituraQR() {
+            document.getElementById('qr-reader-overlay').style.display = 'none';
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner.clear();
+                }).catch(err => console.error(err));
             }
         }
 
-        // Bipe sonoro suave ao ler o QR Code
-        function playBeep() {
+        // ==========================================
+        // ENVIO DE DADOS (POST FETCH)
+        // ==========================================
+        function mostrarMensagem(texto, tipo) {
+            const msgBox = document.getElementById('feedback-msg');
+            msgBox.style.display = 'block';
+            msgBox.innerText = texto;
+            
+            if (tipo === 'erro') {
+                msgBox.className = 'p-4 rounded-xl text-sm font-medium text-center bg-red-100 text-red-700';
+            } else if (tipo === 'sucesso') {
+                msgBox.className = 'p-4 rounded-xl text-sm font-medium text-center bg-green-100 text-green-700';
+            }
+        }
+
+        async function enviarDados() {
+            const nome = document.getElementById('nome').value.trim();
+            
+            // Validações
+            if (!nome) {
+                mostrarMensagem("Por favor, preencha o Nome do Colaborador.", "erro");
+                return;
+            }
+            if (!codigoPDA) {
+                mostrarMensagem("Por favor, leia o QR Code do PDA.", "erro");
+                return;
+            }
+            if (!latitude || !longitude) {
+                mostrarMensagem("Aguardando localização. Permita o GPS do navegador.", "erro");
+                return;
+            }
+
+            // Prepara a interface para o carregamento
+            const btnSubmit = document.getElementById('btn-submit');
+            const originalBtnText = btnSubmit.innerHTML;
+            btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registrando...';
+            btnSubmit.disabled = true;
+            btnSubmit.classList.add('opacity-70', 'cursor-not-allowed');
+            document.getElementById('feedback-msg').style.display = 'none';
+
+            // Pega Data e Hora locais
+            const agora = new Date();
+            const dataAtual = agora.toLocaleDateString('pt-BR');
+            const horaAtual = agora.toLocaleTimeString('pt-BR');
+            const mapLink = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+
+            const payload = {
+                data: dataAtual,
+                hora: horaAtual,
+                nome: nome,
+                pda: codigoPDA,
+                latitude: latitude,
+                longitude: longitude,
+                googleMapsLink: mapLink
+            };
+
             try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                oscillator.type = 'sine';
-                oscillator.frequency.value = 800; // hz
-                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                oscillator.start();
-                setTimeout(() => oscillator.stop(), 100);
-            } catch(e) { console.log("Áudio não suportado"); }
+                // Envia para o Google Sheets
+                // Usando text/plain para evitar bloqueios de CORS preflight no Google Script
+                const response = await fetch(GOOGLE_SCRIPT_WEB_APP_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                // Como é o Google Apps Script, às vezes retorna opaco, mas se não der throw, funcionou.
+                mostrarMensagem("Retirada registrada com sucesso na planilha!", "sucesso");
+                
+                // Limpar formulário
+                document.getElementById('nome').value = "";
+                codigoPDA = "";
+                document.getElementById('pda-resultado').innerText = "Aguardando...";
+                
+            } catch (error) {
+                mostrarMensagem("Erro ao enviar. Verifique sua conexão com a internet.", "erro");
+                console.error(error);
+            } finally {
+                // Restaura o botão
+                btnSubmit.innerHTML = originalBtnText;
+                btnSubmit.disabled = false;
+                btnSubmit.classList.remove('opacity-70', 'cursor-not-allowed');
+                
+                // Ocultar mensagem de sucesso após 5 segundos
+                setTimeout(() => {
+                    const msgBox = document.getElementById('feedback-msg');
+                    if(msgBox.classList.contains('bg-green-100')) {
+                        msgBox.style.display = 'none';
+                    }
+                }, 5000);
+            }
         }
     </script>
 </body>
