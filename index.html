@@ -27,12 +27,27 @@
             <div class="bg-blue-600 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
                 <i class="fa-solid fa-mobile-screen-button text-2xl"></i>
             </div>
-            <h1 class="text-2xl font-bold text-gray-800">Retirada de PDA</h1>
-            <p class="text-gray-500 text-sm mt-2">Registre o uso lendo o QR Code do aparelho.</p>
+            <h1 class="text-2xl font-bold text-gray-800">Controle de PDA</h1>
+            <p class="text-gray-500 text-sm mt-2">Registre a retirada ou devolução lendo o QR Code.</p>
         </div>
 
         <!-- Formulário -->
         <div class="space-y-6">
+
+            <!-- Tipo de Registro (Retirada ou Devolução) -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-3">Tipo de Registro *</label>
+                <div class="flex gap-4">
+                    <label class="flex-1 flex items-center justify-center gap-2 p-3 border border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 transition has-[:checked]:bg-blue-50 has-[:checked]:border-blue-600 has-[:checked]:text-blue-700">
+                        <input type="radio" name="tipo-registro" value="Retirada" class="w-4 h-4 text-blue-600 focus:ring-blue-500" checked>
+                        <span class="font-semibold text-sm">Retirada</span>
+                    </label>
+                    <label class="flex-1 flex items-center justify-center gap-2 p-3 border border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 transition has-[:checked]:bg-blue-50 has-[:checked]:border-blue-600 has-[:checked]:text-blue-700">
+                        <input type="radio" name="tipo-registro" value="Devolução" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                        <span class="font-semibold text-sm">Devolução</span>
+                    </label>
+                </div>
+            </div>
             
             <!-- Nome do Colaborador -->
             <div>
@@ -59,23 +74,12 @@
                 </div>
             </div>
 
-            <!-- Geolocalização -->
-            <div class="flex flex-col gap-1">
-                <div class="flex justify-between items-center">
-                    <label class="block text-sm font-semibold text-gray-700">Geolocalização</label>
-                    <span id="geo-status" class="text-sm font-bold text-orange-500 flex items-center gap-1">
-                        <i class="fa-solid fa-spinner fa-spin"></i> Buscando...
-                    </span>
-                </div>
-                <p id="geo-coords" class="text-xs text-gray-500">Autorize o GPS para registrar.</p>
-            </div>
-
             <!-- Mensagem de Feedback -->
             <div id="feedback-msg" class="hidden p-4 rounded-xl text-sm font-medium text-center"></div>
 
             <!-- Botão Submit -->
             <button id="btn-submit" onclick="enviarDados()" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-blue-700 active:bg-blue-800 transition shadow-md flex justify-center items-center gap-2">
-                <i class="fa-solid fa-cloud-arrow-up"></i> Registrar Retirada
+                <i class="fa-solid fa-cloud-arrow-up"></i> Registrar Movimentação
             </button>
 
         </div>
@@ -94,37 +98,6 @@
         
         let html5QrcodeScanner = null;
         let codigoPDA = "";
-        let latitude = "";
-        let longitude = "";
-
-        // ==========================================
-        // GEOLOCALIZAÇÃO
-        // ==========================================
-        function obterLocalizacao() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        latitude = position.coords.latitude;
-                        longitude = position.coords.longitude;
-                        
-                        document.getElementById('geo-status').innerHTML = '<i class="fa-solid fa-circle-check"></i> Localizado';
-                        document.getElementById('geo-status').className = 'text-sm font-bold text-green-600 flex items-center gap-1';
-                        document.getElementById('geo-coords').innerText = `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`;
-                    },
-                    (error) => {
-                        document.getElementById('geo-status').innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Erro';
-                        document.getElementById('geo-status').className = 'text-sm font-bold text-red-600 flex items-center gap-1';
-                        document.getElementById('geo-coords').innerText = 'Falha ao obter localização. Verifique as permissões.';
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                );
-            } else {
-                document.getElementById('geo-coords').innerText = "Geolocalização não suportada pelo navegador.";
-            }
-        }
-        
-        // Inicia a busca pelo GPS assim que a página carrega
-        window.onload = obterLocalizacao;
 
         // ==========================================
         // LEITOR DE QR CODE
@@ -182,6 +155,7 @@
 
         async function enviarDados() {
             const nome = document.getElementById('nome').value.trim();
+            const tipoRegistro = document.querySelector('input[name="tipo-registro"]:checked').value;
             
             // Validações
             if (!nome) {
@@ -190,10 +164,6 @@
             }
             if (!codigoPDA) {
                 mostrarMensagem("Por favor, leia o QR Code do PDA.", "erro");
-                return;
-            }
-            if (!latitude || !longitude) {
-                mostrarMensagem("Aguardando localização. Permita o GPS do navegador.", "erro");
                 return;
             }
 
@@ -209,16 +179,13 @@
             const agora = new Date();
             const dataAtual = agora.toLocaleDateString('pt-BR');
             const horaAtual = agora.toLocaleTimeString('pt-BR');
-            const mapLink = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
 
             const payload = {
                 data: dataAtual,
                 hora: horaAtual,
                 nome: nome,
                 pda: codigoPDA,
-                latitude: latitude,
-                longitude: longitude,
-                googleMapsLink: mapLink
+                tipo: tipoRegistro // Envia se é Retirada ou Devolução
             };
 
             try {
@@ -232,10 +199,9 @@
                     body: JSON.stringify(payload)
                 });
 
-                // Como é o Google Apps Script, às vezes retorna opaco, mas se não der throw, funcionou.
-                mostrarMensagem("Retirada registrada com sucesso na planilha!", "sucesso");
+                mostrarMensagem("Registro salvo com sucesso na planilha!", "sucesso");
                 
-                // Limpar formulário
+                // Limpar formulário (mantém o tipo de registro selecionado)
                 document.getElementById('nome').value = "";
                 codigoPDA = "";
                 document.getElementById('pda-resultado').innerText = "Aguardando...";
